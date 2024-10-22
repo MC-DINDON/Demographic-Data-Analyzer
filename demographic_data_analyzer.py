@@ -31,17 +31,21 @@ def calculate_demographic_data(print_data=True):
     rich_percentage = round(df.loc[(df['salary'] == '>50K')&(df["hours-per-week"]== min_work_hours)].shape[0] / df.loc[df["hours-per-week"]== min_work_hours].shape[0], 1)
 
     # What country has the highest percentage of people that earn >50K?
-    #df with % for each salary type
-    #df2 = df[['native-country','salary']].value_counts().to_frame()
-    #print(df2.loc[(df2['country'] == 'Mexico') & (df2['salary'] == '>50K')])
     df2 = df.groupby(["native-country", "salary"], as_index=False)['age'].count()
-    print(df2)
-    highest_earning_country = None
+    df2 = df2.rename(columns={'age': 'subset_ppl'}) 
+    df3 = df.groupby('native-country', as_index=False)['age'].count()
+    df3 = df3.rename(columns={'age': 'total_ppl'}) 
+    df3 = pd.merge(df2, df3, how ='left', on ='native-country')
+    df3['percentage_salary'] = df3['subset_ppl'] / df3['total_ppl']
+    df4 = df3[df3['salary'].str.contains(">50K")==True][['native-country','percentage_salary']]
 
-    highest_earning_country_percentage = None
+    highest_earning_row = df4[df4['percentage_salary']==df4['percentage_salary'].max()]
+    highest_earning_country = highest_earning_row['native-country'].iloc[0]
+    highest_earning_country_percentage = round(highest_earning_row['percentage_salary'].iloc[0],1)
 
     # Identify the most popular occupation for those who earn >50K in India.
-    top_IN_occupation = None
+    df5 = df.loc[(df['salary'] == '>50K')&(df["native-country"]== 'India')].groupby('occupation', as_index=False)['age'].count()
+    top_IN_occupation = df5[df5['age']==df5['age'].max()]['occupation'].iloc[0]
 
     # DO NOT MODIFY BELOW THIS LINE
 
