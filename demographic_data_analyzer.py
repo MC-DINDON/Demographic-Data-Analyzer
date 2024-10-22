@@ -19,33 +19,43 @@ def calculate_demographic_data(print_data=True):
     # What percentage of people with advanced education (`Bachelors`, `Masters`, or `Doctorate`) make more than 50K?
     # What percentage of people without advanced education make more than 50K?
     # percentage with salary >50K
-    higher_education_rich = round((df.loc[(df['salary'] == '>50K')&(df['education'].isin(['Bachelors', 'Masters', 'Doctorate']))].shape[0] / df.loc[df['education'].isin(['Bachelors', 'Masters', 'Doctorate'])].shape[0])*100, 1)
-
-    lower_education_rich = round((df.loc[(df['salary'] == '>50K')&(~df['education'].isin(['Bachelors', 'Masters', 'Doctorate']))].shape[0] / df.loc[~df['education'].isin(['Bachelors', 'Masters', 'Doctorate'])].shape[0])*100, 1)
-
+    q1 = df['education'].isin(['Bachelors', 'Masters', 'Doctorate'])
+    q2 = df['salary'] == '>50K'
+    higher_education_rich = round((q1 & q2).sum() / q1.sum()*100,1)
+    lower_education_rich = round((~q1 & q2).sum() / (~q1).sum()*100,1)
+    #initial code, much less readable
+    #higher_education_rich = round((df.loc[(df['salary'] == '>50K')&(df['education'].isin(['Bachelors', 'Masters', 'Doctorate']))].shape[0] / df.loc[df['education'].isin(['Bachelors', 'Masters', 'Doctorate'])].shape[0])*100, 1)
 
     # What is the minimum number of hours a person works per week (hours-per-week feature)?
     min_work_hours = df["hours-per-week"].min()
 
     # What percentage of the people who work the minimum number of hours per week have a salary of >50K?
-    rich_percentage = round((df.loc[(df['salary'] == '>50K')&(df["hours-per-week"]== min_work_hours)].shape[0] / df.loc[df["hours-per-week"]== min_work_hours].shape[0])*100, 1)
+    q1 = df["hours-per-week"]== min_work_hours
+    rich_percentage = round((q1 & q2).sum() / q1.sum()*100,1)
 
     # What country has the highest percentage of people that earn >50K?
-    df2 = df.groupby(["native-country", "salary"], as_index=False)['age'].count()
-    df2 = df2.rename(columns={'age': 'subset_ppl'}) 
-    df3 = df.groupby('native-country', as_index=False)['age'].count()
-    df3 = df3.rename(columns={'age': 'total_ppl'}) 
-    df3 = pd.merge(df2, df3, how ='left', on ='native-country')
-    df3['percentage_salary'] = df3['subset_ppl'] / df3['total_ppl']
-    df4 = df3[df3['salary'].str.contains(">50K")==True][['native-country','percentage_salary']]
-
-    highest_earning_row = df4[df4['percentage_salary']==df4['percentage_salary'].max()]
-    highest_earning_country = highest_earning_row['native-country'].iloc[0]
-    highest_earning_country_percentage = round((highest_earning_row['percentage_salary'].iloc[0])*100,1)
+    #elegant way to build filter
+    p = (df[q2]['native-country'].value_counts() \
+                                / df['native-country'].value_counts() * 100).sort_values(ascending=False)
+    #old bad way
+    #df2 = df.groupby(["native-country", "salary"], as_index=False)['age'].count()
+    #df2 = df2.rename(columns={'age': 'subset_ppl'}) 
+    #df3 = df.groupby('native-country', as_index=False)['age'].count()
+    #df3 = df3.rename(columns={'age': 'total_ppl'}) 
+    #df3 = pd.merge(df2, df3, how ='left', on ='native-country')
+    #df3['percentage_salary'] = df3['subset_ppl'] / df3['total_ppl']
+    #df4 = df3[df3['salary'].str.contains(">50K")==True][['native-country','percentage_salary']]
+    #highest_earning_row = df4[df4['percentage_salary']==df4['percentage_salary'].max()]
+    
+    'Note that value_counts returns a series object. Country name becomes the index, therefore we access it with p.index[x]'
+    'The percentages we are looking for are the values of this serie. We can access the value with iloc[x]'
+    highest_earning_country = p.index[0]
+    highest_earning_country_percentage = round(p.iloc[0],1)
 
     # Identify the most popular occupation for those who earn >50K in India.
-    df5 = df.loc[(df['salary'] == '>50K')&(df["native-country"]== 'India')].groupby('occupation', as_index=False)['age'].count()
-    top_IN_occupation = df5[df5['age']==df5['age'].max()]['occupation'].iloc[0]
+    q1 = df["native-country"]== 'India'
+    p = df[q1 & q2]['occupation'].value_counts().sort_values(ascending=False)
+    top_IN_occupation = p.index[0]
 
     # DO NOT MODIFY BELOW THIS LINE
 
